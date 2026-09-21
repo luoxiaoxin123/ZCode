@@ -1714,6 +1714,99 @@ const zhCN: Record<string, string> = {
   "settings.nativeSearchEnhancementsDescription":
     "在新建会话或应用重启后恢复的会话中使用增强 Find 和 Grep。当前会话保持现有设置；Windows 的 Find 保持不变。",
   "settings.memory": "记忆",
+  "settings.autoMode.title": "Auto 模式",
+  "settings.autoMode.enabled": "在模式切换器中显示「自动审批」",
+  "settings.autoMode.enabled.description":
+    "自动审批模式下，只读操作和工作区内编辑直接执行；其余工具调用先交给审批模型判定：常规操作自动放行，有风险的被拦截并告诉 Agent 原因，拿不准时按下方设置处理。",
+  "settings.autoMode.backend": "审批后端",
+  "settings.autoMode.backend.description": "二选一：用大模型审批，或使用 TypeSafe 评分服务。",
+  "settings.autoMode.backend.llm": "大模型（LLM）",
+  "settings.autoMode.backend.typesafe": "TypeSafe",
+  "settings.autoMode.llm.source": "审批模型",
+  "settings.autoMode.llm.source.session": "跟随当前会话模型",
+  "settings.autoMode.llm.source.configured": "指定已配置的模型",
+  "settings.autoMode.llm.source.custom": "自定义端点",
+  "settings.autoMode.llm.source.session.description":
+    "使用当前会话正在用的模型审批。智谱官方套餐（Coding Plan）与自定义 Provider 都可直接使用，无需额外配置。",
+  "settings.autoMode.llm.source.configured.description":
+    "从已在「模型服务」中配置的模型里选一个专门做审批，例如更快、更便宜的模型。",
+  "settings.autoMode.llm.source.custom.description":
+    "直接填写一个 OpenAI 兼容或 Anthropic 协议的端点，与 ZCode 的模型配置相互独立。",
+  "settings.autoMode.llm.model": "模型",
+  "settings.autoMode.llm.pickModel": "选择模型",
+  "settings.autoMode.llm.thinking": "审批时开启思考",
+  "settings.autoMode.llm.thinking.description":
+    "关闭（推荐）更快、更省额度；开启后判定更稳，但每次审批耗时明显增加。",
+  "settings.autoMode.llm.twoStage": "两段式审批",
+  "settings.autoMode.llm.twoStage.description":
+    "先快速判定，只有不能直接放行时才做完整复核，常规操作更快。",
+  "settings.autoMode.timeout": "超时（秒）",
+  "settings.autoMode.timeout.description": "单次审批请求的超时时间，超时视为审批器故障。",
+  "settings.autoMode.custom.protocol": "协议",
+  "settings.autoMode.custom.baseURL": "Base URL",
+  "settings.autoMode.custom.baseURL.openai-compatible":
+    "例如 https://open.bigmodel.cn/api/paas/v4，请求发往 <Base URL>/chat/completions。",
+  "settings.autoMode.custom.baseURL.anthropic":
+    "例如 https://open.bigmodel.cn/api/anthropic，请求发往 <Base URL>/v1/messages。",
+  "settings.autoMode.custom.apiKey": "API Key",
+  "settings.autoMode.custom.model": "模型名称",
+  "settings.autoMode.custom.thinkingParam": "思考开关参数",
+  "settings.autoMode.custom.thinkingParam.description":
+    "不同厂商控制思考的参数不同。选择与端点匹配的写法，「审批时开启思考」开关才会生效。",
+  "settings.autoMode.custom.thinkingParam.none": "不发送",
+  "settings.autoMode.custom.thinkingParam.zhipu": "智谱 / Z.ai（thinking.type）",
+  "settings.autoMode.custom.thinkingParam.qwen": "Qwen / vLLM（enable_thinking）",
+  "settings.autoMode.custom.thinkingParam.openai": "OpenAI（reasoning_effort）",
+  "settings.autoMode.custom.thinkingParam.anthropic": "Anthropic（extended thinking）",
+  "settings.autoMode.apiKey.configured": "已配置（{masked}），输入新值以替换",
+  "settings.autoMode.apiKey.empty": "未配置",
+  "settings.autoMode.typesafe.privacy":
+    "使用 TypeSafe 时，审批规则、最近的任务描述和待审批的命令参数（可能含路径或密钥）会发送给该服务，请只接入你信任的部署。",
+  "settings.autoMode.typesafe.baseURL": "Base URL",
+  "settings.autoMode.typesafe.apiKey": "API Key",
+  "settings.autoMode.typesafe.model": "模型",
+  "settings.autoMode.typesafe.allowProb": "放行阈值",
+  "settings.autoMode.typesafe.denyProb": "拦截阈值",
+  "settings.autoMode.typesafe.threshold.description":
+    "取值 0.5–1。「放行」档概率达到阈值才放行，「拦截」档达到阈值就拦截（优先判断），都没达到视为拿不准。",
+  "settings.autoMode.onUncertain": "拿不准时",
+  "settings.autoMode.onUncertain.description":
+    "审批模型无法确定操作是否在你的授权范围内时的处理方式。",
+  "settings.autoMode.onUnavailable": "审批器故障时",
+  "settings.autoMode.onUnavailable.description":
+    "网络错误、鉴权失败、超时或未配置时的处理方式。任何情况下都不会自动放行。",
+  "settings.autoMode.fallback.ask": "弹窗问我",
+  "settings.autoMode.fallback.deny": "直接拒绝",
+  "settings.autoMode.lists.allow": "白名单",
+  "settings.autoMode.lists.allow.description":
+    "命中即直接放行，不经过审批模型。像 Bash(python:*) 这类等同于任意代码执行的规则会被自动忽略。",
+  "settings.autoMode.lists.allow.placeholder":
+    "每行一条，例如：\nBash(npm test:*)\nBash(git status)\nWebFetch(domain:github.com)",
+  "settings.autoMode.lists.deny": "黑名单",
+  "settings.autoMode.lists.deny.description": "命中即直接拒绝，优先于白名单和所有自动放行。",
+  "settings.autoMode.lists.deny.placeholder":
+    "每行一条，例如：\nBash(git push:*)\nBash(rm -rf:*)\nWrite(/etc/*)",
+  "settings.autoMode.lists.invalid": "以下规则格式不正确，应为 Tool 或 Tool(内容)：{rules}",
+  "settings.autoMode.rules.allow": "审批规则 · 允许",
+  "settings.autoMode.rules.soft_deny": "审批规则 · 需要确认",
+  "settings.autoMode.rules.environment": "审批规则 · 环境说明",
+  "settings.autoMode.rules.description":
+    "写给审批模型看的自然语言描述，每行一条。留空使用默认规则（见占位内容），填写后整段替换默认规则。",
+  "settings.autoMode.rules.restoreDefault": "恢复默认",
+  "settings.autoMode.recent": "最近判定",
+  "settings.autoMode.recent.refresh": "刷新",
+  "settings.autoMode.recent.empty": "暂无记录。切换到「自动审批」模式后，审批判定会显示在这里。",
+  "settings.autoMode.recent.cached": "缓存",
+  "settings.autoMode.outcome.allow": "放行",
+  "settings.autoMode.outcome.block": "拦截",
+  "settings.autoMode.outcome.uncertain": "拿不准",
+  "settings.autoMode.outcome.unavailable": "故障",
+  "settings.autoMode.outcome.limit": "拦截过多",
+  "settings.autoMode.gatekeeperDetected":
+    "检测到外置 zcode-gatekeeper hook 仍挂在 {path} 上，与原生 Auto 模式同时启用会重复审批。建议运行 node ~/.zcode/gatekeeper/gatekeeper.mjs uninstall 卸载。",
+  "settings.autoMode.configFile": "配置文件：{path}",
+  "settings.autoMode.loadFailed": "加载 Auto 模式配置失败：{message}",
+  "settings.autoMode.unavailable": "当前环境不支持配置 Auto 模式。",
   "settings.memory.workspaceMemory": "工作区记忆",
   "settings.memoryDescription":
     "在工作区中保存并复用长期上下文，新会话生效。开启后可能增加模型调用和 Token 成本。",
@@ -5335,10 +5428,12 @@ const zhCN: Record<string, string> = {
   "mode.label.glm.build": "变更前确认",
   "mode.label.glm.edit": "自动编辑",
   "mode.label.glm.plan": "计划模式",
+  "mode.label.glm.auto": "自动审批",
   "mode.label.glm.yolo": "完全访问",
   "mode.description.glm.build": "改文件前先问我。",
   "mode.description.glm.edit": "自动编辑文件。",
   "mode.description.glm.plan": "编辑前先出计划。",
+  "mode.description.glm.auto": "审批模型自动放行常规操作，有风险时拦截或问我。",
   "mode.description.glm.yolo": "减少确认次数。",
   "todo.panel.title": "待办",
   "todo.panel.currentTask": "当前任务",

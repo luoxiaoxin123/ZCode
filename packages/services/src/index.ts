@@ -80,6 +80,8 @@ export { IBroadcastService } from "./broadcast/broadcast.js";
 
 // Onboarding 完成记录服务（本地持久化，后续上传服务器）
 export { IOnboardingRecordService } from "./onboarding/onboardingRecord.js";
+// Auto 模式配置服务：同样只导出 descriptor，工厂由 node.ts 从实现文件导入。
+export { IAutoModeService } from "./auto-mode/autoMode.js";
 export type {
   CreateOnboardingRecordServiceOptions,
   OnboardingRecordServiceFactory,

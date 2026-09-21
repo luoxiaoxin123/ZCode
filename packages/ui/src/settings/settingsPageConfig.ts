@@ -12,6 +12,7 @@ import {
   AlarmClock,
   Anchor,
   Brain,
+  ShieldCheck,
   Blocks,
   Globe2,
   Cable,
@@ -77,6 +78,12 @@ const BASE_SETTINGS_SECTIONS: SettingsSectionDefinition[] = [
     id: "memory",
     icon: Brain,
     titleId: "settings.memory",
+    groupId: "agentCapabilities",
+  },
+  {
+    id: "autoMode",
+    icon: ShieldCheck,
+    titleId: "settings.autoMode.title",
     groupId: "agentCapabilities",
   },
   {

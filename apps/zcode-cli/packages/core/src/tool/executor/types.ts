@@ -1,5 +1,6 @@
 import type {
   AgentExecutionTelemetryPort,
+  AutoModeClassifierPort,
   AgentTelemetryActorKind,
   BackgroundResultOriginMeta,
   CollaborationMode,
@@ -92,6 +93,8 @@ export interface ToolExecutorOptions {
   browserDocumentationRoot?: string;
   fileSystemPort?: FileSystemPort;
   httpClientPort?: HttpClientPort;
+  /** auto 模式审批器；缺省时 auto 模式的待审批调用回退到人工确认。 */
+  autoModeClassifier?: AutoModeClassifierPort;
   imageProcessorPort?: ImageProcessorPort;
   pdfDocumentPort?: PdfDocumentPort;
   model?: Model;
@@ -196,6 +199,8 @@ export interface ToolExecutorDeps {
   browserDocumentationRoot?: string;
   fileSystemPort?: FileSystemPort;
   httpClientPort?: HttpClientPort;
+  /** auto 模式审批器；缺省时 auto 模式的待审批调用回退到人工确认。 */
+  autoModeClassifier?: AutoModeClassifierPort;
   imageProcessorPort?: ImageProcessorPort;
   pdfDocumentPort?: PdfDocumentPort;
   model?: Model;

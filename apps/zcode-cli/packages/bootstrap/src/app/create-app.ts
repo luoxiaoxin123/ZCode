@@ -10,6 +10,7 @@ import {
   resolveEffectiveBashShellSelection,
 } from "@zcode/adapters/exec";
 import { createNodeFileSystemAdapter } from "@zcode/adapters/fs";
+import { createFileAutoModeSettingsAdapter } from "@zcode/adapters/auto-mode";
 import { createNodeWebFetchHttpClientAdapter } from "@zcode/adapters/http";
 import { createJimpImageProcessorAdapter } from "@zcode/adapters/image";
 import { createPopplerPdfDocumentAdapter } from "@zcode/adapters/pdf";
@@ -737,6 +738,17 @@ export async function createZCodeApp(options: ZCodeAppOptions): Promise<ZCodeApp
       browserControlPort,
       fileSystemPort,
       httpClientPort,
+      autoModeSettingsPort:
+        options.autoModeSettingsPort ??
+        createFileAutoModeSettingsAdapter({
+          env: options.env ?? process.env,
+          onConfigError: (message) =>
+            logger.warn("Auto mode config invalid", {
+              event: "auto_mode.config.invalid",
+              message,
+              module: "bootstrap.app",
+            }),
+        }),
       imageProcessorPort,
       pdfDocumentPort,
       artifactStore,

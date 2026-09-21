@@ -70,6 +70,7 @@ import { PluginsSection } from "@/settings/PluginsSection.js";
 import { HooksSection } from "@/settings/HooksSection.js";
 import { WorkspaceFileSearchSection } from "@/settings/WorkspaceFileSearchSection.js";
 import { MemorySettingsSection } from "@/settings/MemorySettingsSection.js";
+import { AutoModeSettingsSection } from "@/settings/autoMode/AutoModeSettingsSection.js";
 import { BrowserSettingsSection } from "@/settings/BrowserSettingsSection.js";
 import { ComputerUseSection } from "@/settings/ComputerUseSection.js";
 import { ShortcutSettingsSection } from "@/settings/ShortcutSettingsSection.js";
@@ -1831,6 +1832,11 @@ export function SettingsPage({
                               projectMemoryViewerAvailable={Boolean(isDesktop)}
                               workspaceDisplayNames={memoryWorkspaceDisplayNames}
                             />
+                          </ServiceProvider>
+                        ) : activeSection === "autoMode" ? (
+                          <ServiceProvider services={localHostServices}>
+                            {/* Auto 模式配置归本机 Host 所有，Agent 按 mtime 热加载。 */}
+                            <AutoModeSettingsSection />
                           </ServiceProvider>
                         ) : activeSection === "plugin" ? (
                           <PluginsSection

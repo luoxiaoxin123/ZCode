@@ -34,6 +34,9 @@ import {
   useToolbarShortcutBindings,
 } from "@/v4/composer/toolbarShortcuts.js";
 import type { V4ComposerToolbarProps } from "@/v4/composer/V4ComposerToolbar.js";
+import { useAutoModeEnabled } from "@/hooks/useAutoModeEnabled.js";
+
+const AUTO_MODE_ID = "auto";
 
 function noop(): void {}
 
@@ -59,7 +62,16 @@ function V4ComposerModeSwitchImpl({
   const { intl } = useZCodeIntl();
   const displayProvider = provider ?? ZCODE_AGENT_PROVIDER;
   const modeShortcutLabel = useShortcutCommandLabel("cycleSessionMode");
-  const modes = getZCodeAgentAvailableModes();
+  const autoModeEnabled = useAutoModeEnabled();
+  const currentMode = draftConfig?.mode;
+  // 设置页关闭「自动审批」入口时隐藏该项；当前正处于 auto 的会话仍保留，避免选中项消失。
+  const modes = useMemo(
+    () =>
+      getZCodeAgentAvailableModes().filter(
+        (mode) => mode.id !== AUTO_MODE_ID || autoModeEnabled || currentMode === AUTO_MODE_ID,
+      ),
+    [autoModeEnabled, currentMode],
+  );
   const permissions = modes.filter((mode) => mode.id !== "plan");
   const selected = permissions.find((mode) => mode.id === draftConfig?.mode);
   const label = (mode: (typeof modes)[number]) =>
@@ -75,11 +87,11 @@ function V4ComposerModeSwitchImpl({
       category: "mode",
       type: "select",
       currentValue: draftConfig?.mode ?? "build",
-      options: getZCodeAgentAvailableModes()
+      options: modes
         .filter((mode) => mode.id !== "plan")
         .map((mode) => ({ value: mode.id, name: mode.name })),
     }),
-    [draftConfig?.mode],
+    [draftConfig?.mode, modes],
   );
   const cycle = useCallback(() => {
     const next = getNextConfigSelectValue(modeOption);

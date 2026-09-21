@@ -10,6 +10,7 @@ import {
   PERSONAL_PROVIDER_CONFIG_FILE_NAME,
 } from "@zcode/provider-node";
 import { getAppConfigDir as resolveAppConfigDir } from "./paths.js";
+import { ZCODE_AUTO_MODE_CONFIG_FILE_ENV } from "@zcode/shared/auto-mode";
 import {
   buildLocalMediaPreviewUrl,
   isProviderProvisioningAccountCredentialKey,
@@ -291,6 +292,7 @@ import { ISystemService } from "./system/system.js";
 import { ITerminalService } from "./terminal/terminal.js";
 import { ISettingService } from "./setting/setting.js";
 import { IOnboardingRecordService } from "./onboarding/onboardingRecord.js";
+import { IAutoModeService } from "./auto-mode/autoMode.js";
 import { ICredentialService } from "./credential/credential.js";
 import { IBroadcastService } from "./broadcast/broadcast.js";
 import { IZCodeTaskService } from "./session/zcodeTaskService.js";
@@ -336,6 +338,7 @@ import { createSystemService } from "./system/systemService.js";
 import { createTerminalService } from "./terminal/terminalService.js";
 import { createSettingServiceWithMigrations } from "./setting/settingService.js";
 import { createOnboardingRecordService } from "./onboarding/onboardingRecordService.js";
+import { createAutoModeService, getAutoModeConfigFilePath } from "./auto-mode/autoModeService.js";
 import { createLegacyTeamOrganizationResolver } from "./model-provider/legacyTeamOrganizationResolver.js";
 import { createObservableSettingService } from "./setting/observableSettingService.js";
 import { createCredentialService } from "./credential/credentialService.js";
@@ -2230,6 +2233,8 @@ export function createLocalServices(options: {
           telemetryEnv,
           userId: telemetryProfile?.id,
         }),
+        // auto 模式配置由 Host 写、Agent 只读；下发绝对路径保证自定义数据目录时两侧一致。
+        [ZCODE_AUTO_MODE_CONFIG_FILE_ENV]: getAutoModeConfigFilePath(),
         ...createNodeProviderRuntimePathEnv({
           // Built-in Active 路径按当前 Endpoint 隔离，不能通过同步的固定路径
           // getter 读取；Agent spawn 必须等待本轮 Endpoint Source 完成解析和物化。
@@ -2428,6 +2433,7 @@ export function createLocalServices(options: {
     .register(ITerminalService, createTerminalService({ settingService }))
     .register(ISettingService, settingService)
     .register(IOnboardingRecordService, onboardingRecordService)
+    .register(IAutoModeService, createAutoModeService())
     .register(ICredentialService, credentialService)
     .register(IBroadcastService, broadcastService)
     .register(IZCodeTaskService, zcodeTaskService)

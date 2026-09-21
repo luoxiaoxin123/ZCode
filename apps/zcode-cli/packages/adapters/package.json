@@ -14,6 +14,10 @@
       "types": "./dist/storage/index.d.ts",
       "import": "./dist/storage/index.js"
     },
+    "./auto-mode": {
+      "types": "./dist/auto-mode/index.d.ts",
+      "import": "./dist/auto-mode/index.js"
+    },
     "./fs": {
       "types": "./dist/fs/index.d.ts",
       "import": "./dist/fs/index.js"

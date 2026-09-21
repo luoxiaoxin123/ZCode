@@ -16,7 +16,7 @@ import type { ExecutableToolCall, ToolEntry, ToolExecutionResult } from "../type
 import { normalizeToolExecutionInput } from "../input-normalization.js";
 import { resolveToolApproval } from "./approval-gate.js";
 import { createErrorResult, createPermissionErrorResult } from "./errors.js";
-import { emitPermissionDenied, emitPermissionRequested, emitPermissionResolved } from "./events.js";
+import { emitPermissionRequested, emitPermissionResolved } from "./events.js";
 import { applyPreToolPermissionDecision, runPermissionRequestHooks } from "./hook-flow.js";
 import { racePermissionResponders } from "./permission-responder-race.js";
 import {
@@ -33,6 +33,8 @@ import type { ToolExecutorDeps } from "./types.js";
 import { summarizeInput } from "./utils.js";
 import { validateInput } from "./validation.js";
 import { applyMemoryFilePermission } from "./memory-file-permission.js";
+import { loadAutoModeListRules, runAutoModeGate } from "./auto-mode-flow.js";
+import { denyByPermissionDecision } from "./permission-rule-deny.js";
 
 type ToolPermissionFlowResult =
   | { allowed: true; executionInput: unknown; permissionWaitMs?: number }
@@ -59,6 +61,7 @@ export async function resolveToolPermission(
     // workflow 草稿免确认要按工作目录解析相对路径，见 PermissionService 的
     // isPreapprovedWorkflowDraftWrite。
     workingDirectory: deps.getWorkingDirectory(),
+    workspaceRoot: deps.getWorkspaceRoot(),
   };
   const runtimePermissionContext = resolveRuntimePermissionContext(deps);
   const rulePolicy = entry.resolvePermissionRulePolicy?.(executionInput, runtimePermissionContext);
@@ -68,7 +71,11 @@ export async function resolveToolPermission(
 
   let projectRules: PermissionRuleset | null;
   try {
-    projectRules = await loadProjectPermissionRuleset(deps);
+    projectRules = await loadAutoModeListRules(
+      deps,
+      mode,
+      await loadProjectPermissionRuleset(deps),
+    );
   } catch (error) {
     return {
       allowed: false,
@@ -126,30 +133,24 @@ export async function resolveToolPermission(
   }
 
   if (permissionDecision.decision === "deny") {
-    telemetry?.setPermissionDecision("denied");
-    await emitPermissionDenied(deps, toolCall, permissionDecision.reason, traceContext);
-
-    deps.logger?.warn("Tool permission denied", {
-      ...traceContextToLogContext(traceContext),
-      decision: permissionDecision.decision,
-      event: "tool.permission.denied",
+    return denyByPermissionDecision(
+      deps,
+      toolCall,
+      permissionDecision,
       mode,
-      module: "core.tool.executor",
-      reason: permissionDecision.reason,
-      ruleId: permissionDecision.ruleId,
-      status: "failed",
-      toolCallId: toolCall.id,
-      toolName: toolCall.name,
-    });
-    return {
-      allowed: false,
-      result: createPermissionErrorResult(toolCall, permissionDecision.reason, {
-        decision: permissionDecision.decision,
-        mode,
-        ruleId: permissionDecision.ruleId,
-      }),
-    };
+      traceContext,
+      telemetry,
+    );
   }
+
+  const gate = await runAutoModeGate(deps, toolCall, executionInput, permissionDecision, {
+    mode,
+    signal,
+    telemetry,
+    traceContext,
+  });
+  if (!("decision" in gate)) return gate;
+  permissionDecision = gate;
 
   const approval = resolveToolApproval(deps, toolCall, entry, executionInput, traceContext);
   if (approval.gate === "proceed") {

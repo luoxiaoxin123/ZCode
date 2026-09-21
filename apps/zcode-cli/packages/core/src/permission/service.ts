@@ -21,6 +21,10 @@ import { isPreapprovedWorkflowDraftWrite } from "./workflow-draft-path.js";
 import { applyPermissionUpdates } from "../tool/executor/permission-rules.js";
 import { isWebFetchPreapprovedUrl } from "../tool/webfetch-preapproved.js";
 import type { ToolPermissionRulePolicy } from "../tool/types.js";
+import {
+  filterDangerousAllowRulesForAuto,
+  isEditTargetInsideWorkspace,
+} from "./auto-mode-policy.js";
 
 // -----------------------------------------------
 // Types
@@ -41,6 +45,8 @@ export interface PermissionContext {
    * 可选：拿不到工作目录的调用方照常按其余规则判定，不会因此少一层确认。
    */
   workingDirectory?: string;
+  /** 工作区根目录；auto 模式快速通道判断「编辑是否落在工作区内」时使用。 */
+  workspaceRoot?: string;
 }
 
 export interface PermissionToolCapability {
@@ -73,7 +79,17 @@ export interface PermissionDecisionResult {
    * allow 覆盖）靠这个结构化标记识别"不可抹掉的确认"，而不是去匹配 ruleId 字符串。
    */
   alwaysAsk?: boolean;
+  /**
+   * auto 模式下该 ask 可以交给审批器（classifier）判定。只有 checkAutoMode 的兜底分支会设置；
+   * alwaysAsk、用户交互、项目 ask 规则产生的 ask 始终需要用户本人确认。
+   */
+  classifierEligible?: boolean;
 }
+
+/** auto 模式规则号。 */
+export const AUTO_MODE_FAST_PATH_RULE_ID = "mode.auto.fastpath";
+export const AUTO_MODE_CLASSIFY_RULE_ID = "mode.auto.classify";
+export const AUTO_MODE_CLASSIFIER_RULE_ID = "mode.auto.classifier";
 
 // -----------------------------------------------
 // Permission Service
@@ -92,7 +108,6 @@ export class PermissionService {
   grantSessionPermission(updates: PermissionUpdate[]): void {
     this.sessionRules = applyPermissionUpdates(this.sessionRules, updates);
   }
-
 
   checkPermission(
     context: PermissionContext,
@@ -137,15 +152,6 @@ export class PermissionService {
       return this.allow(context, capability, "mode.yolo", "Yolo mode bypasses permission prompts");
     }
 
-    if (context.mode === "auto") {
-      return this.deny(
-        context,
-        capability,
-        "mode.auto.unimplemented",
-        "Auto mode is reserved but not implemented yet",
-      );
-    }
-
     if (this.config.disallowedTools.has(context.toolName)) {
       return this.deny(
         context,
@@ -177,7 +183,10 @@ export class PermissionService {
       return this.checkPlanMode(context, capability);
     }
 
-    if (this.matchesProjectRules(projectRules, "allow", context, capability, rulePolicy)) {
+    // auto 模式忽略「任意代码执行」类 allow 规则，否则一条 Bash(python:*) 就能绕过审批器。
+    const effectiveAllowRules =
+      context.mode === "auto" ? filterDangerousAllowRulesForAuto(projectRules) : projectRules;
+    if (this.matchesProjectRules(effectiveAllowRules, "allow", context, capability, rulePolicy)) {
       return this.allow(
         context,
         capability,
@@ -227,7 +236,48 @@ export class PermissionService {
       return this.checkEditMode(context, capability);
     }
 
+    if (context.mode === "auto") {
+      return this.checkAutoMode(context, capability);
+    }
+
     return this.checkBuildMode(context, capability);
+  }
+
+  /**
+   * auto 模式：确定性快速通道先放行（只读、工作区内编辑、低风险会话状态），
+   * 其余 ask 标记为可交给审批器。审批本身是异步 I/O，在 tool executor 的 auto-mode-flow 里完成。
+   */
+  private checkAutoMode(
+    context: PermissionContext,
+    capability: ResolvedPermissionCapability,
+  ): PermissionDecisionResult {
+    if (capability.permissionName === "edit" && capability.sideEffectScope === "workspace") {
+      if (isEditTargetInsideWorkspace(context.input, context)) {
+        return this.allow(
+          context,
+          capability,
+          AUTO_MODE_FAST_PATH_RULE_ID,
+          "Auto mode allows file edits inside the workspace",
+        );
+      }
+      return this.classify(context, capability, "File edit outside the workspace");
+    }
+    const buildDecision = this.checkBuildMode(context, capability);
+    if (buildDecision.decision === "allow") {
+      return { ...buildDecision, ruleId: AUTO_MODE_FAST_PATH_RULE_ID };
+    }
+    return this.classify(context, capability, buildDecision.reason ?? "Tool requires approval");
+  }
+
+  private classify(
+    context: PermissionContext,
+    capability: ResolvedPermissionCapability,
+    reason: string,
+  ): PermissionDecisionResult {
+    return {
+      ...this.ask(context, capability, AUTO_MODE_CLASSIFY_RULE_ID, reason),
+      classifierEligible: true,
+    };
   }
 
   private matchesProjectRules(
@@ -324,7 +374,7 @@ export class PermissionService {
    * 但**压不过"阻断"**——所以这里先自己走一遍硬阻断判定。
    *
    * 为什么不直接返回 ask：disallowedTools 是用户配置的硬禁用，项目 deny 规则符合工具自报的
-   * denyPriority: "beforeAsk"，auto 模式是"该模式未实现"的保护。少了这一步，一个被硬禁用的
+   * denyPriority: "beforeAsk"。少了这一步，一个被硬禁用的
    * 工具会退化成"弹个窗、用户一点就能跑"。
    *
    * 这些判定在 checkPermission 里按原有顺序还会各自出现一次；此处刻意只覆盖 alwaysAsk 工具，
@@ -336,14 +386,6 @@ export class PermissionService {
     projectRules?: PermissionRuleset | null,
     rulePolicy?: ToolPermissionRulePolicy,
   ): PermissionDecisionResult {
-    if (context.mode === "auto") {
-      return this.deny(
-        context,
-        capability,
-        "mode.auto.unimplemented",
-        "Auto mode is reserved but not implemented yet",
-      );
-    }
     if (this.config.disallowedTools.has(context.toolName)) {
       return this.deny(
         context,
@@ -586,8 +628,7 @@ export class PermissionService {
   ): ResolvedPermissionCapability {
     return {
       allowedInPlanMode: toolCapability?.allowedInPlanMode ?? false,
-      alwaysAsk:
-        toolCapability?.permission?.alwaysAsk ?? toolCapability?.alwaysAsk ?? false,
+      alwaysAsk: toolCapability?.permission?.alwaysAsk ?? toolCapability?.alwaysAsk ?? false,
       readOnly: toolCapability?.readOnly ?? this.isReadOnlyTool(context.toolName),
       destructive: toolCapability?.destructive ?? this.isDestructiveTool(context.toolName),
       requiresUserInteraction:

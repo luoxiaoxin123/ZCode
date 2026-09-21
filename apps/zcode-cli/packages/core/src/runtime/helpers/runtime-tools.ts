@@ -21,6 +21,7 @@ import {
 } from "./tool-allowlist.js";
 import { isStaleBranchRuntimeTaskEvent } from "../methods/runtime-command-generation.js";
 import { resolveEnabledProjectMemoryRoot } from "./project-memory.js";
+import { createRuntimeAutoModeClassifier } from "../methods/auto-mode-reviewer.js";
 
 const DEFAULT_SUBAGENT_BACKGROUND_BASH_MAX_MS = 3_600_000;
 const EMPTY_RUNTIME_HOOK_CONFIG = {
@@ -176,6 +177,7 @@ function createRuntimeToolExecutor(
       : undefined,
     fileSystemPort: deps.fileSystemPort,
     httpClientPort: deps.httpClientPort,
+    autoModeClassifier: createRuntimeAutoModeClassifier(runtime, deps),
     imageProcessorPort: deps.imageProcessorPort,
     // 合并删除旧模型连接时曾漏掉此端口；Read 分页渲染与整份 PDF 页数检查仍依赖宿主注入。
     pdfDocumentPort: deps.pdfDocumentPort,

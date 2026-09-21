@@ -1817,6 +1817,103 @@ const enUS: Record<string, string> = {
   "settings.nativeSearchEnhancementsDescription":
     "Use enhanced Find and Grep in new sessions and sessions restored after an app restart. Active sessions keep their current setting; Find remains unchanged on Windows.",
   "settings.memory": "Memory",
+  "settings.autoMode.title": "Auto mode",
+  "settings.autoMode.enabled": 'Show "Auto" in the mode switcher',
+  "settings.autoMode.enabled.description":
+    "In Auto mode, read-only actions and edits inside the workspace run directly. Other tool calls go to a reviewer: routine actions are approved automatically, risky ones are blocked and the agent is told why, and uncertain ones follow the setting below.",
+  "settings.autoMode.backend": "Reviewer backend",
+  "settings.autoMode.backend.description":
+    "Choose one: review with an LLM, or use the TypeSafe scoring service.",
+  "settings.autoMode.backend.llm": "LLM",
+  "settings.autoMode.backend.typesafe": "TypeSafe",
+  "settings.autoMode.llm.source": "Reviewer model",
+  "settings.autoMode.llm.source.session": "Same as the session model",
+  "settings.autoMode.llm.source.configured": "A configured model",
+  "settings.autoMode.llm.source.custom": "Custom endpoint",
+  "settings.autoMode.llm.source.session.description":
+    "Reviews with the model the current session uses. Works with the official Coding Plan and custom providers without extra setup.",
+  "settings.autoMode.llm.source.configured.description":
+    "Pick one of the models configured under Model providers, for example a faster or cheaper one.",
+  "settings.autoMode.llm.source.custom.description":
+    "Use an OpenAI-compatible or Anthropic endpoint, independent of ZCode's model configuration.",
+  "settings.autoMode.llm.model": "Model",
+  "settings.autoMode.llm.pickModel": "Select a model",
+  "settings.autoMode.llm.thinking": "Enable thinking for reviews",
+  "settings.autoMode.llm.thinking.description":
+    "Off (recommended) is faster and cheaper. On gives steadier decisions, but each review takes noticeably longer.",
+  "settings.autoMode.llm.twoStage": "Two-stage review",
+  "settings.autoMode.llm.twoStage.description":
+    "A quick check first; the full review only runs when the action is not clearly fine.",
+  "settings.autoMode.timeout": "Timeout (seconds)",
+  "settings.autoMode.timeout.description":
+    "Timeout for each review request. A timeout counts as a reviewer failure.",
+  "settings.autoMode.custom.protocol": "Protocol",
+  "settings.autoMode.custom.baseURL": "Base URL",
+  "settings.autoMode.custom.baseURL.openai-compatible":
+    "For example https://open.bigmodel.cn/api/paas/v4. Requests go to <Base URL>/chat/completions.",
+  "settings.autoMode.custom.baseURL.anthropic":
+    "For example https://open.bigmodel.cn/api/anthropic. Requests go to <Base URL>/v1/messages.",
+  "settings.autoMode.custom.apiKey": "API key",
+  "settings.autoMode.custom.model": "Model name",
+  "settings.autoMode.custom.thinkingParam": "Thinking parameter",
+  "settings.autoMode.custom.thinkingParam.description":
+    "Vendors control thinking with different parameters. Pick the one your endpoint understands so the thinking toggle takes effect.",
+  "settings.autoMode.custom.thinkingParam.none": "Don't send",
+  "settings.autoMode.custom.thinkingParam.zhipu": "Zhipu / Z.ai (thinking.type)",
+  "settings.autoMode.custom.thinkingParam.qwen": "Qwen / vLLM (enable_thinking)",
+  "settings.autoMode.custom.thinkingParam.openai": "OpenAI (reasoning_effort)",
+  "settings.autoMode.custom.thinkingParam.anthropic": "Anthropic (extended thinking)",
+  "settings.autoMode.apiKey.configured": "Configured ({masked}). Type a new value to replace it",
+  "settings.autoMode.apiKey.empty": "Not configured",
+  "settings.autoMode.typesafe.privacy":
+    "With TypeSafe, the review rules, recent task text and the arguments of the action being reviewed (which may contain paths or secrets) are sent to that service. Only use a deployment you trust.",
+  "settings.autoMode.typesafe.baseURL": "Base URL",
+  "settings.autoMode.typesafe.apiKey": "API key",
+  "settings.autoMode.typesafe.model": "Model",
+  "settings.autoMode.typesafe.allowProb": "Allow threshold",
+  "settings.autoMode.typesafe.denyProb": "Block threshold",
+  "settings.autoMode.typesafe.threshold.description":
+    'Between 0.5 and 1. Allowed when the "allow" probability reaches its threshold; blocked when the "block" probability reaches its threshold (checked first). Otherwise it counts as unsure.',
+  "settings.autoMode.onUncertain": "When the reviewer is unsure",
+  "settings.autoMode.onUncertain.description":
+    "What to do when the reviewer cannot tell whether the action is within what you authorized.",
+  "settings.autoMode.onUnavailable": "When the reviewer fails",
+  "settings.autoMode.onUnavailable.description":
+    "What to do on network errors, auth failures, timeouts or missing configuration. Actions are never approved automatically in this case.",
+  "settings.autoMode.fallback.ask": "Ask me",
+  "settings.autoMode.fallback.deny": "Deny",
+  "settings.autoMode.lists.allow": "Allow list",
+  "settings.autoMode.lists.allow.description":
+    "Matching actions run without review. Rules equivalent to arbitrary code execution, such as Bash(python:*), are ignored.",
+  "settings.autoMode.lists.allow.placeholder":
+    "One rule per line, for example:\nBash(npm test:*)\nBash(git status)\nWebFetch(domain:github.com)",
+  "settings.autoMode.lists.deny": "Deny list",
+  "settings.autoMode.lists.deny.description":
+    "Matching actions are denied. Takes priority over the allow list and every automatic approval.",
+  "settings.autoMode.lists.deny.placeholder":
+    "One rule per line, for example:\nBash(git push:*)\nBash(rm -rf:*)\nWrite(/etc/*)",
+  "settings.autoMode.lists.invalid":
+    "These rules are not valid; use Tool or Tool(content): {rules}",
+  "settings.autoMode.rules.allow": "Review rules · Allow",
+  "settings.autoMode.rules.soft_deny": "Review rules · Needs confirmation",
+  "settings.autoMode.rules.environment": "Review rules · Environment",
+  "settings.autoMode.rules.description":
+    "Plain-language guidance for the reviewer, one item per line. Leave empty to use the defaults shown as placeholder; anything you enter replaces that section's defaults.",
+  "settings.autoMode.rules.restoreDefault": "Restore defaults",
+  "settings.autoMode.recent": "Recent decisions",
+  "settings.autoMode.recent.refresh": "Refresh",
+  "settings.autoMode.recent.empty": "Nothing yet. Decisions appear here once you use Auto mode.",
+  "settings.autoMode.recent.cached": "cached",
+  "settings.autoMode.outcome.allow": "Allowed",
+  "settings.autoMode.outcome.block": "Blocked",
+  "settings.autoMode.outcome.uncertain": "Unsure",
+  "settings.autoMode.outcome.unavailable": "Failed",
+  "settings.autoMode.outcome.limit": "Too many blocks",
+  "settings.autoMode.gatekeeperDetected":
+    "The external zcode-gatekeeper hook is still registered in {path}. Running it together with native Auto mode reviews every action twice. Uninstall it with node ~/.zcode/gatekeeper/gatekeeper.mjs uninstall.",
+  "settings.autoMode.configFile": "Config file: {path}",
+  "settings.autoMode.loadFailed": "Failed to load Auto mode settings: {message}",
+  "settings.autoMode.unavailable": "Auto mode settings are not available in this environment.",
   "settings.memory.workspaceMemory": "Workspace Memory",
   "settings.memoryDescription":
     "Save and reuse long-term context in workspaces. Applies to new sessions and may increase model requests and token costs.",
@@ -5559,10 +5656,13 @@ const enUS: Record<string, string> = {
   "mode.label.glm.build": "Ask before changes",
   "mode.label.glm.edit": "Edit automatically",
   "mode.label.glm.plan": "Plan mode",
+  "mode.label.glm.auto": "Auto",
   "mode.label.glm.yolo": "Full access",
   "mode.description.glm.build": "Ask before file changes.",
   "mode.description.glm.edit": "Edit files automatically.",
   "mode.description.glm.plan": "Plan before editing.",
+  "mode.description.glm.auto":
+    "A reviewer approves routine actions; risky ones are blocked or sent to you.",
   "mode.description.glm.yolo": "Run with fewer confirmations.",
   "todo.panel.title": "Todo",
   "todo.panel.currentTask": "Current task",

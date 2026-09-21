@@ -1,4 +1,4 @@
-import type { RuntimeInputPresentation } from "@zcode/contracts";
+import type { AutoModeSettingsPort, RuntimeInputPresentation } from "@zcode/contracts";
 /* eslint-disable max-lines -- Runtime 类型集中承载 core/runtime 对外结构，拆分需要单独迁移。 */
 import { PermissionService, ToolScheduler } from "./deps.js";
 import type {
@@ -332,6 +332,8 @@ export interface AgentRuntimeDeps {
   browserControlPort?: BrowserControlPort;
   fileSystemPort?: FileSystemPort;
   httpClientPort?: HttpClientPort;
+  /** auto 模式配置与审计的 I/O 端口；缺省时审批器使用默认配置、不写审计。 */
+  autoModeSettingsPort?: AutoModeSettingsPort;
   imageProcessorPort?: ImageProcessorPort;
   pdfDocumentPort?: PdfDocumentPort;
   skillPort?: SkillPort;

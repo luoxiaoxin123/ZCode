@@ -48,6 +48,7 @@ import type {
   ExecutionPort,
   BrowserControlPort,
   FileSystemPort,
+  AutoModeSettingsPort,
   GoalStatus,
   HttpClientPort,
   ImageProcessorPort,
@@ -161,6 +162,8 @@ export interface ZCodeAppOptions {
   nodeReplBrowserBroker?: NodeReplBrowserBroker;
   fileSystemPort?: FileSystemPort;
   httpClientPort?: HttpClientPort;
+  /** auto 模式配置/审计端口；缺省时读取 `<data>/.zcode/v2/auto-mode.json`。 */
+  autoModeSettingsPort?: AutoModeSettingsPort;
   imageProcessorPort?: ImageProcessorPort;
   pdfDocumentPort?: PdfDocumentPort;
   artifactStore?: ToolArtifactStorePort;

@@ -2,6 +2,7 @@ import { join } from "node:path";
 import { createNodeContextSourceAdapter } from "@zcode/adapters/context";
 import { createNodeExecutionAdapter } from "@zcode/adapters/exec";
 import { createNodeFileSystemAdapter } from "@zcode/adapters/fs";
+import { createFileAutoModeSettingsAdapter } from "@zcode/adapters/auto-mode";
 import { createNodeWebFetchHttpClientAdapter } from "@zcode/adapters/http";
 import { createNodeSkillAdapter } from "@zcode/adapters/skills";
 import type { ConfigResult } from "@zcode/adapters/config";
@@ -321,6 +322,9 @@ function createWorkflowChildRuntime(
           noProxy: deps.configResult.config.network.noProxy,
           caCertFile: deps.configResult.config.network.caCertFile,
         }),
+      autoModeSettingsPort:
+        deps.appOptions.autoModeSettingsPort ??
+        createFileAutoModeSettingsAdapter({ env: deps.appOptions.env ?? process.env }),
       imageProcessorPort: deps.imageProcessorPort,
       pdfDocumentPort: deps.pdfDocumentPort,
       artifactStore: deps.artifactStore,
