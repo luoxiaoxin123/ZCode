@@ -1,0 +1,154 @@
+# 发布 ZCode Auto 桌面端安装包。
+#
+# 触发：在 GitHub 上「发布」一个新的 Release（Releases → Draft a new release → Publish）。
+# 产物：Windows x64 / Windows arm64 / Linux x64 / macOS arm64 / macOS x64 安装包，
+#       构建完成后自动上传到触发它的那个 Release。
+# 手动运行（Actions → Release ZCode Auto → Run workflow）：可填一个已存在的 tag 上传到对应 Release；
+# 留空则只保存为本次运行的构建产物（Artifacts），用于试跑。
+#
+# 说明：
+# - ZCODE_AUTO_IDENTITY=1 打出「ZCode Auto」身份（独立 appId / 应用名 / 数据目录），
+#   可以和官方 ZCode 并排安装，也不会被官方自动更新覆盖。
+# - 没有代码签名证书：Windows 安装时 SmartScreen 会提示「未知发布者」；
+#   macOS 包未签名，首次打开需右键「打开」，或执行 `xattr -cr "/Applications/ZCode Auto.app"`。
+
+name: Release ZCode Auto
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "上传到哪个已存在的 Release tag（留空则只保存为构建产物）"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-zcode-auto-${{ github.event.release.tag_name || inputs.tag || github.run_id }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: "24.14.0"
+  PNPM_VERSION: "10.33.2"
+  RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+  # 生产后端（官方 Coding Plan、账号登录都依赖它），同时使用 ZCode Auto 身份。
+  ZCODE_ENV: production
+  ZCODE_AUTO_IDENTITY: "1"
+  # 跨平台远程工作区预编译资产依赖内部镜像，公开 CI 上跳过；本机桌面功能不受影响。
+  ZCODE_SKIP_REMOTE_ASSETS: "1"
+  # GitHub runner 在海外，直接走官方源比 npmmirror 更快更稳。
+  ELECTRON_MIRROR: "https://github.com/electron/electron/releases/download/"
+  ELECTRON_BUILDER_BINARIES_MIRROR: "https://github.com/electron-userland/electron-builder-binaries/releases/download/"
+  # 没有签名证书：禁止 electron-builder 去钥匙串里自动找证书。
+  CSC_IDENTITY_AUTO_DISCOVERY: "false"
+  NODE_OPTIONS: "--max-old-space-size=8192"
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: windows-x64
+            runner: windows-latest
+            os: win
+            arch: x64
+          - name: windows-arm64
+            runner: windows-11-arm
+            os: win
+            arch: arm64
+          - name: linux-x64
+            runner: ubuntu-22.04
+            os: linux
+            arch: x64
+          - name: macos-arm64
+            runner: macos-14
+            os: mac
+            arch: arm64
+          - name: macos-x64
+            runner: macos-15-intel
+            os: mac
+            arch: x64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup pnpm
+        shell: bash
+        run: |
+          corepack enable
+          corepack prepare "pnpm@${PNPM_VERSION}" --activate
+          pnpm --version
+
+      - name: Linux packaging tools
+        if: matrix.os == 'linux'
+        run: |
+          sudo apt-get update
+          # rpm: 生成 .rpm；libarchive-tools(bsdtar): 生成 Arch 的 .pkg.tar.zst
+          sudo apt-get install -y rpm libarchive-tools
+
+      - name: Set version from release tag
+        if: env.RELEASE_TAG != ''
+        shell: bash
+        run: |
+          # v1.2.3 / 1.2.3 / v1.2.3-auto.1 → 写入根 package.json 的 version（安装包版本号取自这里）
+          version="${RELEASE_TAG#v}"
+          if [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-+].*)?$ ]]; then
+            node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json','utf8'));p.version=process.argv[1];fs.writeFileSync('package.json',JSON.stringify(p,null,2)+'\n')" "$version"
+            echo "App version set to $version"
+          else
+            echo "Tag '$RELEASE_TAG' is not semver; keeping package.json version"
+          fi
+
+      - name: Install dependencies
+        shell: bash
+        run: pnpm install --frozen-lockfile
+
+      - name: Build installer
+        shell: bash
+        run: pnpm bundle:desktop -- --os ${{ matrix.os }} --arch ${{ matrix.arch }}
+
+      - name: Collect installers
+        id: collect
+        shell: bash
+        run: |
+          mkdir -p release-assets
+          shopt -s nullglob
+          for file in packages/desktop/dist/*.{exe,dmg,zip,AppImage,deb,rpm,pkg.tar.zst}; do
+            # GitHub 会把文件名里的空格替换成点；这里统一改成连字符：ZCode-Auto-<version>-<os>-<arch>.<ext>
+            name="$(basename "$file")"
+            cp "$file" "release-assets/${name// /-}"
+          done
+          ls -la release-assets
+          if [ -z "$(ls -A release-assets)" ]; then
+            echo "No installer produced" >&2
+            exit 1
+          fi
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: zcode-auto-${{ matrix.name }}
+          path: release-assets/*
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload to release
+        if: env.RELEASE_TAG != ''
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$RELEASE_TAG" release-assets/* --clobber --repo "$GITHUB_REPOSITORY"

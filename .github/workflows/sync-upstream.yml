@@ -1,0 +1,96 @@
+# 自动合并上游 zai-org/ZCode 的新代码到本仓库 main。
+#
+# - 每 6 小时检查一次，也可以在 Actions → Sync upstream → Run workflow 手动触发。
+# - 无冲突：生成一个 merge commit 推到 main（保留本仓库的 Auto 模式等改动）。
+# - 有冲突：不改 main，开（或更新）一个带冲突文件列表的 Issue，需要在本地手动解决。
+#
+# 注意：GITHUB_TOKEN 不能推送修改 .github/workflows 的提交。上游目前没有 workflow 文件；
+# 如果以后上游改了 workflow 导致推送被拒，在仓库 Settings → Secrets 里加一个带 `workflow`
+# 权限的 Personal Access Token，命名为 SYNC_TOKEN 即可。
+
+name: Sync upstream
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: sync-upstream
+  cancel-in-progress: false
+
+env:
+  UPSTREAM_REPO: https://github.com/zai-org/ZCode.git
+  UPSTREAM_BRANCH: main
+  TARGET_BRANCH: main
+  CONFLICT_ISSUE_TITLE: "上游合并冲突：zai-org/ZCode"
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_BRANCH }}
+          fetch-depth: 0
+          token: ${{ secrets.SYNC_TOKEN || github.token }}
+
+      - name: Fetch upstream
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add upstream "$UPSTREAM_REPO"
+          git fetch upstream "$UPSTREAM_BRANCH"
+
+      - name: Merge
+        id: merge
+        run: |
+          upstream_ref="upstream/$UPSTREAM_BRANCH"
+          if git merge-base --is-ancestor "$upstream_ref" HEAD; then
+            echo "Already up to date with $upstream_ref"
+            echo "status=up-to-date" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          upstream_sha="$(git rev-parse --short "$upstream_ref")"
+          if git merge --no-edit -m "chore: merge upstream zai-org/ZCode@${upstream_sha}" "$upstream_ref"; then
+            echo "status=merged" >> "$GITHUB_OUTPUT"
+          else
+            {
+              echo "conflicts<<EOF"
+              git diff --name-only --diff-filter=U
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+            git merge --abort
+            echo "status=conflict" >> "$GITHUB_OUTPUT"
+            echo "upstream_sha=${upstream_sha}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Push
+        if: steps.merge.outputs.status == 'merged'
+        run: git push origin "HEAD:$TARGET_BRANCH"
+
+      - name: Report conflict
+        if: steps.merge.outputs.status == 'conflict'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CONFLICTS: ${{ steps.merge.outputs.conflicts }}
+          UPSTREAM_SHA: ${{ steps.merge.outputs.upstream_sha }}
+        run: |
+          body="$(printf '自动合并上游 %s 时出现冲突，main 未改动。\n\n冲突文件：\n\n```\n%s\n```\n\n在本地解决：\n\n```bash\ngit fetch https://github.com/zai-org/ZCode.git main\ngit merge FETCH_HEAD\n# 解决冲突后\ngit push origin main\n```\n\n运行记录：%s' \
+            "$UPSTREAM_SHA" "$CONFLICTS" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID")"
+          echo "$body" >> "$GITHUB_STEP_SUMMARY"
+          # fork 默认关闭 Issues；开不了 Issue 时仍以失败结束，GitHub 会发失败通知邮件。
+          existing="$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "in:title \"$CONFLICT_ISSUE_TITLE\"" --json number --jq '.[0].number' 2>/dev/null || true)"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "$body" || true
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$CONFLICT_ISSUE_TITLE" --body "$body" || \
+              echo "::warning::Could not open an issue (Issues may be disabled on this fork)."
+          fi
+          echo "::error::Upstream merge has conflicts: $(echo "$CONFLICTS" | tr '\n' ' ')"
+          exit 1

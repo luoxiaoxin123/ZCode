@@ -4,6 +4,11 @@
  * 可与正式版并排安装的 `ZCode Preview`。
  */
 export const ZCODE_PREVIEW_IDENTITY_ENV = "ZCODE_PREVIEW_IDENTITY";
+/**
+ * 构建期开关：为真时打出社区分发版「ZCode Auto」（含原生 Auto 模式），连接生产后端，
+ * 使用独立的 appId / 应用名 / 数据目录，可与官方 ZCode 并排安装；不接收官方自动更新。
+ */
+export const ZCODE_AUTO_IDENTITY_ENV = "ZCODE_AUTO_IDENTITY";
 
 const PRODUCTION_IDENTITY = Object.freeze({
   flavor: "production",
@@ -23,9 +28,19 @@ const PREVIEW_IDENTITY = Object.freeze({
   cuaHelperInstallVariant: "preview",
 });
 
+const AUTO_IDENTITY = Object.freeze({
+  flavor: "auto",
+  appId: "dev.zcode.app.auto",
+  productName: "ZCode Auto",
+  linuxExecutableName: "zcode-auto",
+  linuxPackageName: "zcode-auto",
+  cuaHelperInstallVariant: "preview",
+});
+
 export const desktopProductIdentities = Object.freeze({
   production: PRODUCTION_IDENTITY,
   preview: PREVIEW_IDENTITY,
+  auto: AUTO_IDENTITY,
 });
 
 function normalizeDesktopZCodeEnv(env) {
@@ -37,17 +52,23 @@ function normalizeDesktopZCodeEnv(env) {
  * `$ZCODE_PREVIEW_IDENTITY == "1"` 精确比较保持同一套语义。其它拼写在构建期直接失败，
  * 避免 `true` 之类在 YAML 路由层漏匹配、却在脚本层被当成开启，把 Preview 包打进生产验收目录。
  */
-export function isPreviewIdentityRequested(env = process.env) {
-  const value = env[ZCODE_PREVIEW_IDENTITY_ENV]?.trim() ?? "";
+function isIdentitySwitchOn(env, name) {
+  const value = env[name]?.trim() ?? "";
   if (value === "1") {
     return true;
   }
   if (value === "" || value === "0") {
     return false;
   }
-  throw new Error(
-    `invalid ${ZCODE_PREVIEW_IDENTITY_ENV}=${env[ZCODE_PREVIEW_IDENTITY_ENV]}; expected 1 or 0`,
-  );
+  throw new Error(`invalid ${name}=${env[name]}; expected 1 or 0`);
+}
+
+export function isPreviewIdentityRequested(env = process.env) {
+  return isIdentitySwitchOn(env, ZCODE_PREVIEW_IDENTITY_ENV);
+}
+
+export function isAutoIdentityRequested(env = process.env) {
+  return isIdentitySwitchOn(env, ZCODE_AUTO_IDENTITY_ENV);
 }
 
 /**
@@ -57,6 +78,14 @@ export function isPreviewIdentityRequested(env = process.env) {
  * 未知 `ZCODE_ENV` 继续按 test 处理，和共享层 normalizeZCodeEnv 的 fail-safe 默认值一致。
  */
 export function resolveDesktopProductFlavor(env = process.env) {
+  if (isAutoIdentityRequested(env)) {
+    if (isPreviewIdentityRequested(env)) {
+      throw new Error(
+        `${ZCODE_AUTO_IDENTITY_ENV} and ${ZCODE_PREVIEW_IDENTITY_ENV} are mutually exclusive`,
+      );
+    }
+    return "auto";
+  }
   if (isPreviewIdentityRequested(env)) {
     return "preview";
   }
@@ -86,7 +115,7 @@ export function resolveWindowsAppUserModelIdForFlavor(flavor, runtime = { isPack
   if (runtime.isPackaged === false) {
     return "cn.aminer.zcode";
   }
-  return desktopProductIdentities[flavor === "preview" ? "preview" : "production"].appId;
+  return (desktopProductIdentities[flavor] ?? desktopProductIdentities.production).appId;
 }
 
 export function resolveWindowsAppUserModelId(env = process.env, runtime = { isPackaged: true }) {
