@@ -197,6 +197,8 @@ export const resolveBuildAliases = ({
     "../../packages/shared/src/zcodeEndpoint.ts",
   ),
   "@zcode/shared/node": resolve(rootDirectory, "../../packages/shared/src/node.ts"),
+  // 同上：子路径必须显式映射，否则会被改写成 `src/index.ts/auto-mode`。
+  "@zcode/shared/auto-mode": resolve(rootDirectory, "../../packages/shared/src/auto-mode/index.ts"),
   "@zcode/shared": resolve(rootDirectory, "../../packages/shared/src/index.ts"),
   "@zcode/core": resolve(cliDirectory, "../core/dist/index.js"),
 });
